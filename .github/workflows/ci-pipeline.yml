@@ -1,0 +1,128 @@
+name: CI Pipeline for MyWebApp Client
+
+on:
+  push:
+    branches: [ '*' ]  # Trigger on all branches
+  pull_request:
+    branches: [ '*' ]  # Trigger on PRs to all branches
+  workflow_dispatch:  # Allows manual triggering
+
+env:
+  DOTNET_VERSION: '9.0.x'  # Matches your .NET 9 project
+  IMAGE_NAME: mywebapp-client  # Name for the container image
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Test
+      run: dotnet test Tests/MyWebApp.Client.Tests/MyWebApp.Client.Tests.csproj --configuration Release --no-build --verbosity normal
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          MyWebApp.Client/bin/Release/net9.0
+          MyWebApp.Client/Dockerfile
+          MyWebApp.Client/nginx.conf
+        retention-days: 1
+
+  build-and-push-image:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,format=long
+          latest
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./MyWebApp.Client/Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  build-and-push-image-jfrog:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup JFrog CLI
+      uses: jfrog/setup-jfrog-cli@v4
+      env:
+        JF_URL: ${{ vars.JF_URL }}
+        JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+
+    - name: Build Tag and push Docker Image
+      env:
+        IMAGE_NAME: thiagotota.jfrog.io/circleci-docker/MyWebApp.Client.image:${{ github.run_number }}
+      run: |
+        # Use Docker Buildx for multi-platform builds
+        docker buildx create --use
+        # Build the image with the Blazor WebAssembly app
+        # jf docker build -t $IMAGE_NAME .
+        jf docker build -f ./MyWebApp.Client/Dockerfile -t $IMAGE_NAME .
+        # Push to JFrog Artifactory
+        jf docker push $IMAGE_NAME
+          
+    - name: Publish Build info With JFrog CLI
+      env:
+        # Generated and maintained by GitHub
+        JFROG_CLI_BUILD_NAME: MyWebApp.Client
+        # JFrog organization secret
+        JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
+      run: |
+        # Collect environment variables for the build
+        jf rt build-collect-env
+        # Collect VCS details from git and add them to the build
+        jf rt build-add-git
+        # Publish build info
+        jf rt build-publish
