@@ -1,13 +1,13 @@
 # dotnet-citool-test
 
-Sample application to validade the following CI tools:
+Sample application to validate the following CI tools:
 - GitHub Actions
 - CloudBees
 - CircleCI
 
 # MyWebApp Blazor WebAssembly Application
 
-[![Build, Test and Deploy](https://github.com/[YOUR_GITHUB_USERNAME]/[YOUR_REPO_NAME]/actions/workflows/build-test-deploy.yml/badge.svg)](https://github.com/[YOUR_GITHUB_USERNAME]/[YOUR_REPO_NAME]/actions/workflows/build-test-deploy.yml)
+[![CI Pipeline for MyWebApp Client](https://github.com/[YOUR_GITHUB_USERNAME]/[YOUR_REPO_NAME]/actions/workflows/ci-pipeline.yml/badge.svg)](https://github.com/[YOUR_GITHUB_USERNAME]/[YOUR_REPO_NAME]/actions/workflows/ci-pipeline.yml)
 
 A Blazor WebAssembly application with CI/CD pipeline using GitHub Actions.
 
@@ -18,42 +18,52 @@ This project includes a GitHub Actions workflow that automatically:
 1. **Builds** the application
 2. **Tests** the application using the test project
 3. **Creates** a Docker container image
-4. **Publishes** the container to GitHub Container Registry (GHCR)
+4. **Publishes** the container to JFrog Artifactory
 
 ### Workflow Details
 
-The workflow is defined in `.github/workflows/build-test-deploy.yml` and is triggered:
-- On pushes to the `main` branch
-- On pull requests to the `main` branch
+The workflow is defined in `.github/workflows/ci-pipeline.yml` and is triggered:
+- On pushes to all branches
+- On pull requests to all branches
 - Manually via the GitHub Actions UI
 
-### Accessing the Container Image
+## Versioning
 
-After the workflow runs successfully, the container image will be available at:
-ghcr.io/[YOUR_GITHUB_USERNAME]/mywebapp-client:latest
-To pull the image, use:
-docker pull ghcr.io/[YOUR_GITHUB_USERNAME]/mywebapp-client:latest
-### Running the Container Locally
-docker run -p 8080:80 ghcr.io/[YOUR_GITHUB_USERNAME]/mywebapp-client:latest
-Then access the application at http://localhost:8080
+The project uses semantic versioning (SemVer) in the format `MAJOR.MINOR.PATCH.BUILD`:
 
+- Base version is defined in `Directory.Build.props`
+- Build number from GitHub Actions run number is automatically appended
+- Docker images are tagged with `v{VERSION}` (e.g., `v1.0.0.42`)
+- A `latest` tag is also applied to the most recent successful build
+
+### Managing Versions
+
+To update the version manually:
+# Increment patch version (1.0.0 -> 1.0.1)
+./update-version.ps1 -Increment patch
+
+# Increment minor version (1.0.0 -> 1.1.0)
+./update-version.ps1 -Increment minor
+
+# Increment major version (1.0.0 -> 2.0.0)
+./update-version.ps1 -Increment major
+
+# Set specific version
+./update-version.ps1 -Version 3.2.1
 ## Required GitHub Repository Settings
 
 For the workflow to function properly:
 
 1. Ensure GitHub Actions is enabled in your repository settings
-2. Make sure the `GITHUB_TOKEN` has write permissions for packages:
-   - Go to Settings ? Actions ? General ? Workflow permissions
-   - Select "Read and write permissions"
+2. Set up the JFrog Artifactory credentials:
+   - Set `JF_URL` as a GitHub repository variable
+   - Set `JF_ACCESS_TOKEN` as a GitHub repository secret
 
 ## Local Development
 
-To run the application locally:
-cd MyWebApp.Client
+To run the application locally:cd MyWebApp.Client
 dotnet run
-To run tests:
-cd Tests/MyWebApp.Client.Tests
+To run tests:cd Tests/MyWebApp.Client.Tests
 dotnet test
-## Building the Docker Image Locally
-docker build -t mywebapp-client -f MyWebApp.Client/Dockerfile .
+## Building the Docker Image Locallydocker build -t mywebapp-client -f MyWebApp.Client/Dockerfile .
 docker run -p 8080:80 mywebapp-client

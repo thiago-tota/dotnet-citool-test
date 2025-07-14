@@ -4,6 +4,10 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <Product>MyWebApp.Client</Product>
+        <Description>Blazor WebAssembly Client Application</Description>
+        <PackageId>MyWebApp.Client</PackageId>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     </PropertyGroup>
 
     <ItemGroup>
