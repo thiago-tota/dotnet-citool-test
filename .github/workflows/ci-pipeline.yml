@@ -103,15 +103,31 @@ jobs:
 
     - name: Build Tag and push Docker Image
       env:
-        IMAGE_NAME: thiagotota.jfrog.io/circleci-docker/mywebapp-client-image:${{ github.run_number }}
+        REGISTRY_PATH: thiagotota.jfrog.io/circleci-docker
+        IMAGE_NAME: mywebapp-client-image
+        VERSION_TAG: ${{ github.run_number }}
       run: |
         # Use Docker Buildx for multi-platform builds
         docker buildx create --use
-        # Build the image with the Blazor WebAssembly app
-        # jf docker build -t $IMAGE_NAME .
-        jf docker build -f ./MyWebApp.Client/Dockerfile -t $IMAGE_NAME .
-        # Push to JFrog Artifactory
-        jf docker push $IMAGE_NAME
+        
+        # Define image names with tags
+        VERSIONED_IMAGE=${REGISTRY_PATH}/${IMAGE_NAME}:${VERSION_TAG}
+        LATEST_IMAGE=${REGISTRY_PATH}/${IMAGE_NAME}:latest
+        
+        # Build the image with the Blazor WebAssembly app and tag with version
+        echo "Building Docker image..."
+        jf docker build -f ./MyWebApp.Client/Dockerfile -t ${VERSIONED_IMAGE} -t ${LATEST_IMAGE} .
+        
+        # Push both tags to JFrog Artifactory
+        echo "Pushing versioned tag to JFrog Artifactory..."
+        jf docker push ${VERSIONED_IMAGE}
+        echo "Pushing latest tag to JFrog Artifactory..."
+        jf docker push ${LATEST_IMAGE}
+        
+        # Output the pushed image details
+        echo "Successfully pushed images:"
+        echo " - ${VERSIONED_IMAGE}"
+        echo " - ${LATEST_IMAGE}"
           
     - name: Publish Build info With JFrog CLI
       env:
