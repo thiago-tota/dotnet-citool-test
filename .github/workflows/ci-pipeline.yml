@@ -58,7 +58,7 @@ jobs:
 
     - name: Build Tag and push Docker Image
       env:
-        REGISTRY_PATH: thiagotota.jfrog.io/images-local/GitHubActions
+        REGISTRY_PATH: thiagotota.jfrog.io/images-local/githubactions
         IMAGE_NAME: mywebapp-client
         VERSION_TAG: ${{ github.run_number }}
       run: |
