@@ -103,7 +103,7 @@ jobs:
 
     - name: Build Tag and push Docker Image
       env:
-        IMAGE_NAME: thiagotota.jfrog.io/circleci-docker/MyWebApp.Client.image:${{ github.run_number }}
+        IMAGE_NAME: thiagotota.jfrog.io/circleci-docker/mywebapp-client-image:${{ github.run_number }}
       run: |
         # Use Docker Buildx for multi-platform builds
         docker buildx create --use
@@ -116,7 +116,7 @@ jobs:
     - name: Publish Build info With JFrog CLI
       env:
         # Generated and maintained by GitHub
-        JFROG_CLI_BUILD_NAME: MyWebApp.Client
+        JFROG_CLI_BUILD_NAME: mywebapp-client
         # JFrog organization secret
         JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
       run: |
